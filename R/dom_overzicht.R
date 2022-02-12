@@ -61,14 +61,22 @@ dom_overzicht_basis <- function() {
     return(NULL)
   }
 
+  datum_formats <- c("dBY HMS", "dBY", "dmY HMS", "Ymd HMS", "Ymd", "dmY")
+
   overzicht <- req %>%
     httr::content(as = "text") %>%
     readr::read_csv2(locale = readr::locale(decimal_mark = ",", grouping_mark = ".")) %>%
-    dplyr::select(domeintabel = Voorkeurslabel, domeintabelsoort = Elementtype,
-                  wijzigingsdatum = Wijzigingsdatum, begin_geldigheid = `Begin geldigheid`,
-                  eind_geldigheid = `Eind geldigheid`, kolommen = Metadata, guid = X1 ) %>%
+    dplyr::rename_with(.fn = ~"guid", .cols = dplyr::any_of(c("X1", "...1"))) %>% # ivm verschillen in readr versies
+    dplyr::select(domeintabel = Voorkeurslabel,
+                  domeintabelsoort = Elementtype,
+                  wijzigingsdatum = Wijzigingsdatum,
+                  begin_geldigheid = `Begin geldigheid`,
+                  eind_geldigheid = `Eind geldigheid`,
+                  kolommen = Metadata,
+                  guid) %>%
     dplyr::mutate(dplyr::across(.cols = c(wijzigingsdatum, begin_geldigheid, eind_geldigheid),
-                                .fns = ~lubridate::as_date(.x, format = "%d %B %Y %H:%M:%S"))) %>%
+                                .fns = ~lubridate::as_date(lubridate::parse_date_time(.x, orders = datum_formats)))
+                                  ) %>%
     dplyr::mutate(kolommen = stringr::str_split(kolommen, ","))
 
   return(overzicht)
